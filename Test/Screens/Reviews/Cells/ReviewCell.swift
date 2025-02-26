@@ -60,6 +60,7 @@ final class ReviewCell: UITableViewCell {
 
     fileprivate var config: Config?
 
+    fileprivate let avatarImageView = UIImageView()
     fileprivate let reviewTextLabel = UILabel()
     fileprivate let createdLabel = UILabel()
     fileprivate let showMoreButton = UIButton()
@@ -76,6 +77,7 @@ final class ReviewCell: UITableViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
         guard let layout = config?.layout else { return }
+        avatarImageView.frame = layout.avatarImageViewFrame
         reviewTextLabel.frame = layout.reviewTextLabelFrame
         createdLabel.frame = layout.createdLabelFrame
         showMoreButton.frame = layout.showMoreButtonFrame
@@ -88,9 +90,17 @@ final class ReviewCell: UITableViewCell {
 private extension ReviewCell {
 
     func setupCell() {
+        setupAvatarImageView()
         setupReviewTextLabel()
         setupCreatedLabel()
         setupShowMoreButton()
+    }
+
+    func setupAvatarImageView() {
+        contentView.addSubview(avatarImageView)
+        avatarImageView.image = UIImage(named: "l5w5aIHioYc")
+        avatarImageView.layer.cornerRadius = Layout.avatarCornerRadius
+        avatarImageView.clipsToBounds = true
     }
 
     func setupReviewTextLabel() {
@@ -130,6 +140,7 @@ private final class ReviewCellLayout {
     private(set) var reviewTextLabelFrame = CGRect.zero
     private(set) var showMoreButtonFrame = CGRect.zero
     private(set) var createdLabelFrame = CGRect.zero
+    private(set) var avatarImageViewFrame = CGRect.zero
 
     // MARK: - Отступы
 
@@ -162,17 +173,26 @@ private final class ReviewCellLayout {
         var maxY = insets.top
         var showShowMoreButton = false
 
+        // Расположение аватара
+        avatarImageViewFrame = CGRect(
+            origin: CGPoint(x: insets.left, y: maxY),
+            size: Self.avatarSize
+        )
+
         if !config.reviewText.isEmpty() {
-            // Высота текста с текущим ограничением по количеству строк.
+            // Пересчитываем ширину для текста с учетом аватара
+            let textWidth = width - Self.avatarSize.width - avatarToUsernameSpacing
+            
+            // Высота текста с текущим ограничением по количеству строк
             let currentTextHeight = (config.reviewText.font()?.lineHeight ?? .zero) * CGFloat(config.maxLines)
-            // Максимально возможная высота текста, если бы ограничения не было.
-            let actualTextHeight = config.reviewText.boundingRect(width: width).size.height
-            // Показываем кнопку "Показать полностью...", если максимально возможная высота текста больше текущей.
+            // Максимально возможная высота текста, если бы ограничения не было
+            let actualTextHeight = config.reviewText.boundingRect(width: textWidth).size.height
+            // Показываем кнопку "Показать полностью...", если максимально возможная высота текста больше текущей
             showShowMoreButton = config.maxLines != .zero && actualTextHeight > currentTextHeight
 
             reviewTextLabelFrame = CGRect(
-                origin: CGPoint(x: insets.left, y: maxY),
-                size: config.reviewText.boundingRect(width: width, height: currentTextHeight).size
+                origin: CGPoint(x: insets.left + Self.avatarSize.width + avatarToUsernameSpacing, y: maxY),
+                size: config.reviewText.boundingRect(width: textWidth, height: currentTextHeight).size
             )
             maxY = reviewTextLabelFrame.maxY + reviewTextToCreatedSpacing
         }
