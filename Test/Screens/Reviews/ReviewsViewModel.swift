@@ -72,9 +72,28 @@ private extension ReviewsViewModel {
         onStateChange?(state)
     }
 
-}
 
-// MARK: - Items
+    /// Метод предварительной подготовки данных для ячеек.
+    /// Вычисляет размеры текстовых полей в фоновом потоке для оптимизации отрисовки ячеек.
+    func prefetchItems(at indexPaths: [IndexPath]) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            indexPaths.forEach { indexPath in
+                guard 
+                    let self = self,
+                    indexPath.row < self.state.items.count,
+                    let review = self.state.items[indexPath.row] as? ReviewItem 
+                else { return }
+                
+                // Подготовка данных для ячейки
+                _ = review.firstName.boundingRect(width: .greatestFiniteMagnitude)
+                _ = review.lastName.boundingRect(width: .greatestFiniteMagnitude)
+                _ = review.reviewText.boundingRect(width: .greatestFiniteMagnitude)
+                _ = review.created.boundingRect(width: .greatestFiniteMagnitude)
+            }
+        }
+    }
+
+}
 
 private extension ReviewsViewModel {
 
@@ -155,4 +174,11 @@ extension ReviewsViewModel: UITableViewDelegate {
         return remainingDistance <= triggerDistance
     }
 
+}
+
+extension ReviewsViewModel: UITableViewDataSourcePrefetching {
+
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        prefetchItems(at: indexPaths)
+    }
 }

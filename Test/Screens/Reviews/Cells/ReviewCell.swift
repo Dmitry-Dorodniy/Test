@@ -25,7 +25,6 @@ struct ReviewCellConfig {
 
     /// Объект, хранящий посчитанные фреймы для ячейки отзыва.
     fileprivate let layout = ReviewCellLayout()
-
 }
 
 // MARK: - TableCellConfig
@@ -97,6 +96,11 @@ final class ReviewCell: UITableViewCell {
         reviewTextLabel.frame = layout.reviewTextLabelFrame
         createdLabel.frame = layout.createdLabelFrame
         showMoreButton.frame = layout.showMoreButtonFrame
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        config = nil
     }
 
 }
