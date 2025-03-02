@@ -35,6 +35,7 @@ private extension ReviewsViewController {
         let reviewsView = ReviewsView()
         reviewsView.tableView.delegate = viewModel
         reviewsView.tableView.dataSource = viewModel
+        reviewsView.tableView.prefetchDataSource = viewModel
         return reviewsView
     }
 

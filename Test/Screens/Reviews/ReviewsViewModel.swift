@@ -49,6 +49,8 @@ private extension ReviewsViewModel {
         do {
             let data = try result.get()
             let reviews = try decoder.decode(Reviews.self, from: data)
+
+            state.reviewsCount = reviews.count
             state.items += reviews.items.map(makeReviewItem)
             state.offset += state.limit
             state.shouldLoad = state.offset < reviews.count
@@ -70,18 +72,45 @@ private extension ReviewsViewModel {
         onStateChange?(state)
     }
 
-}
 
-// MARK: - Items
+    /// Метод предварительной подготовки данных для ячеек.
+    /// Вычисляет размеры текстовых полей в фоновом потоке для оптимизации отрисовки ячеек.
+    func prefetchItems(at indexPaths: [IndexPath]) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            indexPaths.forEach { indexPath in
+                guard 
+                    let self = self,
+                    indexPath.row < self.state.items.count,
+                    let review = self.state.items[indexPath.row] as? ReviewItem 
+                else { return }
+                
+                // Подготовка данных для ячейки
+                _ = review.firstName.boundingRect(width: .greatestFiniteMagnitude)
+                _ = review.lastName.boundingRect(width: .greatestFiniteMagnitude)
+                _ = review.reviewText.boundingRect(width: .greatestFiniteMagnitude)
+                _ = review.created.boundingRect(width: .greatestFiniteMagnitude)
+            }
+        }
+    }
+
+}
 
 private extension ReviewsViewModel {
 
     typealias ReviewItem = ReviewCellConfig
 
     func makeReviewItem(_ review: Review) -> ReviewItem {
+        print(review)
+
+        let firstName = review.firstName.attributed(font: .username)
+        let lastName = review.lastName.attributed(font: .username)
+        let ratingImage = ratingRenderer.ratingImage(review.rating)
         let reviewText = review.text.attributed(font: .text)
         let created = review.created.attributed(font: .created, color: .created)
         let item = ReviewItem(
+            firstName: firstName,
+            lastName: lastName,
+            ratingImage: ratingImage,
             reviewText: reviewText,
             created: created,
             onTapShowMore: showMoreReview
@@ -96,14 +125,20 @@ private extension ReviewsViewModel {
 extension ReviewsViewModel: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        state.items.count
+        state.items.count + 1
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let config = state.items[indexPath.row]
-        let cell = tableView.dequeueReusableCell(withIdentifier: config.reuseId, for: indexPath)
-        config.update(cell: cell)
-        return cell
+        if indexPath.row < state.items.count {
+            let config = state.items[indexPath.row]
+            let cell = tableView.dequeueReusableCell(withIdentifier: config.reuseId, for: indexPath)
+            config.update(cell: cell)
+            return cell
+        } else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: CountOfReviewsCell.reuseId, for: indexPath) as! CountOfReviewsCell
+            cell.configure(with: state.reviewsCount)
+            return cell
+        }
     }
 
 }
@@ -113,7 +148,7 @@ extension ReviewsViewModel: UITableViewDataSource {
 extension ReviewsViewModel: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        state.items[indexPath.row].height(with: tableView.bounds.size)
+        indexPath.row < state.items.count ? state.items[indexPath.row].height(with: tableView.bounds.size) : 44
     }
 
     /// Метод дозапрашивает отзывы, если до конца списка отзывов осталось два с половиной экрана по высоте.
@@ -139,4 +174,11 @@ extension ReviewsViewModel: UITableViewDelegate {
         return remainingDistance <= triggerDistance
     }
 
+}
+
+extension ReviewsViewModel: UITableViewDataSourcePrefetching {
+
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        prefetchItems(at: indexPaths)
+    }
 }
