@@ -49,6 +49,7 @@ private extension ReviewsViewModel {
         do {
             let data = try result.get()
             let reviews = try decoder.decode(Reviews.self, from: data)
+
             state.items += reviews.items.map(makeReviewItem)
             state.offset += state.limit
             state.shouldLoad = state.offset < reviews.count
@@ -79,9 +80,17 @@ private extension ReviewsViewModel {
     typealias ReviewItem = ReviewCellConfig
 
     func makeReviewItem(_ review: Review) -> ReviewItem {
+        print(review)
+
+        let firstName = review.firstName.attributed(font: .username)
+        let lastName = review.lastName.attributed(font: .username)
+        let ratingImage = ratingRenderer.ratingImage(review.rating)
         let reviewText = review.text.attributed(font: .text)
         let created = review.created.attributed(font: .created, color: .created)
         let item = ReviewItem(
+            firstName: firstName,
+            lastName: lastName,
+            ratingImage: ratingImage,
             reviewText: reviewText,
             created: created,
             onTapShowMore: showMoreReview
